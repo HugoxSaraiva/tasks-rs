@@ -30,7 +30,7 @@ impl Task {
         created_at: NaiveDateTime,
     ) -> Option<Self> {
         let created_at = try_parse_datetime(created_at)?;
-        let completed_at = completed_at.and_then(|date| try_parse_datetime(date));
+        let completed_at = completed_at.and_then(try_parse_datetime);
         Some(Self {
             id: TaskId::from(id),
             description,

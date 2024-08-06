@@ -56,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
                         task.completed_at.map_or(" ", |_| "X"),
                         task.id,
                         task.description,
-                        format!("{}", task.created_at.format("%Y-%m-%d %H:%M:%S"))
+                        task.created_at.format("%Y-%m-%d %H:%M:%S")
                     );
                 }
             }

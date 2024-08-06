@@ -1,15 +1,15 @@
+[package]
+name = "tasks"
+version = "0.1.0"
+edition = "2021"
 rust-version = "1.80.0"
+
 [lib]
 path = "src/lib.rs"
 
 [[bin]]
 path = "src/main.rs"
 name = "tasks-cli"
-
-[package]
-name = "tasks"
-version = "0.1.0"
-edition = "2021"
 
 [dependencies]
 anyhow = "1.0.86"
