@@ -1,4 +1,10 @@
 rust-version = "1.80.0"
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+path = "src/main.rs"
+name = "tasks-cli"
 
 [package]
 name = "tasks"
