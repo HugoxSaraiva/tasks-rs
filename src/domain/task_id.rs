@@ -2,7 +2,8 @@ use std::fmt::Display;
 
 use crate::generator::Generator;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, sqlx::Type)]
+#[sqlx(transparent)]
 pub struct TaskId(u32);
 
 impl TaskId {
