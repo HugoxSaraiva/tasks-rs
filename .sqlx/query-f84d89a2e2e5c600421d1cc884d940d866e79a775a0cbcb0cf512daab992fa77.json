@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT id as \"id: u32\", description, completed_at, created_at\n            FROM tasks\n            ORDER BY id DESC\n        ",
+  "query": "\n            SELECT id as \"id: u32\", description, completed_at, created_at, scope\n            FROM TASKS\n            WHERE id = $1\n        ",
   "describe": {
     "columns": [
       {
@@ -22,17 +22,23 @@
         "name": "created_at",
         "ordinal": 3,
         "type_info": "Datetime"
+      },
+      {
+        "name": "scope",
+        "ordinal": 4,
+        "type_info": "Text"
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
       false,
       false,
       true,
-      false
+      false,
+      true
     ]
   },
-  "hash": "627c140284fa796cecf0312009e1314cde8fcd74901fe46917f5b572df1610bf"
+  "hash": "f84d89a2e2e5c600421d1cc884d940d866e79a775a0cbcb0cf512daab992fa77"
 }

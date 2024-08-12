@@ -4,22 +4,25 @@ use sqlx::types::chrono;
 
 use crate::generator::Generator;
 
-use super::TaskId;
+use super::{NewTask, Scope, TaskId};
 
+#[derive(Debug)]
 pub struct Task {
     pub id: TaskId,
     pub description: String,
     pub completed_at: Option<DateTime<Local>>,
     pub created_at: DateTime<Local>,
+    pub scope: Option<Scope>,
 }
 
 impl Task {
-    pub fn new(description: String, generator: &Generator) -> Self {
+    pub fn new(input: NewTask, generator: &Generator) -> Self {
         Self {
             id: TaskId::new(generator),
-            description,
+            description: input.description,
             completed_at: None,
             created_at: Local::now(),
+            scope: input.scope,
         }
     }
 
@@ -28,6 +31,7 @@ impl Task {
         description: String,
         completed_at: Option<NaiveDateTime>,
         created_at: NaiveDateTime,
+        scope: Option<String>,
     ) -> Option<Self> {
         let created_at = try_parse_datetime(created_at)?;
         let completed_at = completed_at.and_then(try_parse_datetime);
@@ -36,6 +40,7 @@ impl Task {
             description,
             completed_at,
             created_at,
+            scope: scope.map(Scope::new),
         })
     }
 

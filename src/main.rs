@@ -1,7 +1,8 @@
-use clap::{command, CommandFactory, Parser, Subcommand};
+use clap::{command, Parser, Subcommand};
 use tasks::{
     configuration::Settings,
-    domain::Task,
+    domain::{NewTask, Scope, Task},
+    scopes,
     startup::{ensure_db_created, Application},
     tasks::{add_task, complete_task, delete_task, list_tasks},
 };
@@ -10,18 +11,25 @@ use tasks::{
 #[command(version, about, long_about = None)]
 struct Args {
     #[command(subcommand)]
-    command: Option<Command>,
+    command: Commands,
 }
 
 #[derive(Subcommand, Debug)]
-enum Command {
+enum Commands {
     /// Adds new task
     Add {
         /// Task description
         description: String,
+        /// Task scope
+        #[arg(long, short)]
+        scope: Option<String>,
     },
     /// List tasks
-    List,
+    List {
+        /// Scope filter
+        #[arg(long, short)]
+        scope: Option<String>,
+    },
     /// Toggles task completion
     Complete {
         #[arg(value_name = "TASK_ID")]
@@ -32,6 +40,16 @@ enum Command {
         #[arg(value_name = "TASK_ID")]
         id: u32,
     },
+    /// Scope management actions
+    Scope {
+        #[command(subcommand)]
+        action: ScopeCommands,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum ScopeCommands {
+    List,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -40,46 +58,57 @@ async fn main() -> anyhow::Result<()> {
 
     let app_settings = Settings::new("tasks.db".into());
 
-    if let Some(command) = args.command {
-        ensure_db_created(&app_settings).await?;
-        let app = Application::build(app_settings).await?;
-        match command {
-            Command::Add { description } => {
-                add_task(&app.pool, &app.generator, description).await?;
-            }
-            Command::List => {
-                let tasks = list_tasks(&app.pool).await?;
-                let tasks: Vec<Task> = tasks.into_iter().filter_map(|x| x.ok()).collect();
-                for task in tasks {
-                    println!(
-                        "- [{}]\t{}\t{}\t{}",
-                        task.completed_at.map_or(" ", |_| "X"),
-                        task.id,
-                        task.description,
-                        task.created_at.format("%Y-%m-%d %H:%M:%S")
-                    );
-                }
-            }
-            Command::Complete { id } => {
-                let success = complete_task(&app.pool, id).await?;
-                if success {
-                    println!("Successfully completed task with id {}", id)
-                } else {
-                    println!("Task with id {} not found", id)
-                }
-            }
-            Command::Delete { id } => {
-                let success = delete_task(&app.pool, id).await?;
-                if success {
-                    println!("Successfully deleted task with id {}", id)
-                } else {
-                    println!("Task with id {} not found", id)
-                }
+    ensure_db_created(&app_settings).await?;
+    let app = Application::build(app_settings).await?;
+    match args.command {
+        Commands::Add { description, scope } => {
+            let input = NewTask {
+                description,
+                scope: scope.map(Scope::new),
+            };
+            add_task(&app.pool, &app.generator, input).await?;
+        }
+        Commands::List { scope } => {
+            let tasks = list_tasks(&app.pool, scope.map(Scope::new)).await?;
+            let tasks: Vec<Task> = tasks.into_iter().filter_map(|x| x.ok()).collect();
+            println!("Completed\tID\tDescription\tScope\tCreated at");
+            for task in tasks {
+                println!(
+                    "- [{}]\t\t{}\t{}\t{}\t{}",
+                    task.completed_at.map_or(" ", |_| "x"),
+                    task.id,
+                    task.description,
+                    task.scope.as_ref().map_or("None", |s| s.as_ref()),
+                    task.created_at.format("%Y-%m-%d %H:%M:%S")
+                );
             }
         }
-    } else {
-        let mut cmd = Args::command();
-        let _ = cmd.print_help();
+        Commands::Complete { id } => {
+            let success = complete_task(&app.pool, id).await?;
+            if success {
+                println!("Successfully completed task with id {}", id)
+            } else {
+                println!("Task with id {} not found", id)
+            }
+        }
+        Commands::Delete { id } => {
+            let success = delete_task(&app.pool, id).await?;
+            if success {
+                println!("Successfully deleted task with id {}", id)
+            } else {
+                println!("Task with id {} not found", id)
+            }
+        }
+        Commands::Scope { action } => match action {
+            ScopeCommands::List => {
+                let scopes = scopes::list(&app.pool).await?;
+                println!("The following scopes have been found:");
+                for scope in scopes {
+                    println!("{}", scope.as_ref())
+                }
+            }
+        },
     }
+
     Ok(())
 }
