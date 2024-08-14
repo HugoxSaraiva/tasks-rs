@@ -3,7 +3,8 @@ use tasks::{
     configuration::Settings,
     domain::{NewTask, Scope, Task},
     scopes,
-    startup::{ensure_db_created, Application},
+    startup::{ensure_initialized, Application},
+    storage::{self, Folder},
     tasks::{add_task, complete_task, delete_task, list_tasks},
 };
 
@@ -55,10 +56,15 @@ enum ScopeCommands {
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+    let storage_folder = {
+        let mut storage_folder = storage::get_folder_path(Folder::Local);
+        storage_folder.push("tasks");
+        storage_folder.set_extension("db");
+        storage_folder
+    };
+    let app_settings = Settings::new(storage_folder);
 
-    let app_settings = Settings::new("tasks.db".into());
-
-    ensure_db_created(&app_settings).await?;
+    ensure_initialized(&app_settings).await?;
     let app = Application::build(app_settings).await?;
     match args.command {
         Commands::Add { description, scope } => {
