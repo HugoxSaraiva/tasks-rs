@@ -1,5 +1,6 @@
-use clap::{command, Parser, Subcommand};
+use clap::Parser;
 use tasks::{
+    cli::{Cli, Commands, ScopeCommands},
     configuration::Settings,
     domain::{NewTask, Scope, Task},
     scopes,
@@ -8,55 +9,9 @@ use tasks::{
     tasks::{add_task, complete_task, delete_task, list_tasks},
 };
 
-#[derive(Parser)]
-#[command(version, about, long_about = None)]
-struct Args {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
-    /// Adds new task
-    Add {
-        /// Task description
-        description: String,
-        /// Task scope
-        #[arg(long, short)]
-        scope: Option<String>,
-    },
-    /// List tasks
-    #[clap(visible_alias = "ls")]
-    List {
-        /// Scope filter
-        #[arg(long, short)]
-        scope: Option<String>,
-    },
-    /// Toggles task completion
-    Complete {
-        #[arg(value_name = "TASK_ID")]
-        id: u32,
-    },
-    /// Deletes task
-    Delete {
-        #[arg(value_name = "TASK_ID")]
-        id: u32,
-    },
-    /// Scope management actions
-    Scope {
-        #[command(subcommand)]
-        action: ScopeCommands,
-    },
-}
-
-#[derive(Subcommand, Debug)]
-enum ScopeCommands {
-    List,
-}
-
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
+    let args = Cli::parse();
     let storage_folder = {
         let mut storage_folder = storage::get_folder_path(Folder::Local);
         storage_folder.push("tasks");
@@ -67,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
 
     ensure_initialized(&app_settings).await?;
     let app = Application::build(app_settings).await?;
-    match args.command {
+    match args.get_command() {
         Commands::Add { description, scope } => {
             let input = NewTask {
                 description,

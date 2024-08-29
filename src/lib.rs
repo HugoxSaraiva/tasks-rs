@@ -1,3 +1,4 @@
+pub mod cli;
 pub mod configuration;
 pub mod domain;
 pub mod generator;
