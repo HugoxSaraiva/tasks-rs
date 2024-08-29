@@ -11,7 +11,7 @@ pub async fn list_tasks(
         r#"
             SELECT id as "id: u32", description, completed_at, created_at, scope
             FROM tasks
-            WHERE (scope = $1) OR (scope is null AND $1 is null)
+            WHERE (scope = $1) OR ($1 is null)
             ORDER BY id DESC
         "#,
         scope
