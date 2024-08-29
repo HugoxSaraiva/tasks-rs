@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT id as \"id: u32\", description, completed_at, created_at, scope\n            FROM tasks\n            WHERE (scope = $1) OR (scope is null AND $1 is null)\n            ORDER BY id DESC\n        ",
+  "query": "\n            SELECT id as \"id: u32\", description, completed_at, created_at, scope\n            FROM tasks\n            WHERE (scope = $1) OR ($1 is null)\n            ORDER BY id DESC\n        ",
   "describe": {
     "columns": [
       {
@@ -40,5 +40,5 @@
       true
     ]
   },
-  "hash": "96f89dc546ee1eba842cccc84da7a91eb276bd44b5bdbf2b1400bb26797ee2a1"
+  "hash": "c0e80d0c69586998732d6a026e73b921d40b1b130bd07882802280967d08761d"
 }
