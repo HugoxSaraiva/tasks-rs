@@ -26,6 +26,7 @@ enum Commands {
         scope: Option<String>,
     },
     /// List tasks
+    #[clap(visible_alias = "ls")]
     List {
         /// Scope filter
         #[arg(long, short)]
