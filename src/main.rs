@@ -6,6 +6,7 @@ use tasks::{
     scopes,
     startup::{ensure_initialized, Application},
     storage::{self, Folder},
+    tabular::{print_task, print_task_headers},
     tasks::{add_task, complete_task, delete_task, list_tasks},
 };
 
@@ -33,16 +34,9 @@ async fn main() -> anyhow::Result<()> {
         Commands::List { scope } => {
             let tasks = list_tasks(&app.pool, scope.map(Scope::new)).await?;
             let tasks: Vec<Task> = tasks.into_iter().filter_map(|x| x.ok()).collect();
-            println!("Completed\tID\tDescription\tScope\tCreated at");
+            print_task_headers();
             for task in tasks {
-                println!(
-                    "- [{}]\t\t{}\t{}\t{}\t{}",
-                    task.completed_at.map_or(" ", |_| "x"),
-                    task.id,
-                    task.description,
-                    task.scope.as_ref().map_or("None", |s| s.as_ref()),
-                    task.created_at.format("%Y-%m-%d %H:%M:%S")
-                );
+                print_task(&task);
             }
         }
         Commands::Complete { id } => {
