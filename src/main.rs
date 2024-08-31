@@ -6,7 +6,7 @@ use tasks::{
     scopes,
     startup::{ensure_initialized, Application},
     storage::{self, Folder},
-    tabular::{print_task, print_task_headers},
+    tabular::get_tasks_table,
     tasks::{add_task, complete_task, delete_task, list_tasks},
 };
 
@@ -34,10 +34,9 @@ async fn main() -> anyhow::Result<()> {
         Commands::List { scope } => {
             let tasks = list_tasks(&app.pool, scope.map(Scope::new)).await?;
             let tasks: Vec<Task> = tasks.into_iter().filter_map(|x| x.ok()).collect();
-            print_task_headers();
-            for task in tasks {
-                print_task(&task);
-            }
+            let mut table = get_tasks_table(120);
+            table.set_data(tasks);
+            table.print().unwrap();
         }
         Commands::Complete { id } => {
             let success = complete_task(&app.pool, id).await?;
