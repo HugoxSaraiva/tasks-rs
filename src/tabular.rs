@@ -1,4 +1,4 @@
-use std::fmt::Alignment;
+use std::fmt::{Alignment, Display};
 
 use itertools::Itertools;
 
@@ -12,45 +12,28 @@ fn format_string_to_constraint(text: &str, max_len: usize) -> &str {
     &text[0..max_len]
 }
 
-pub fn get_tasks_table(width: u8) -> ConsoleTable<Task> {
-    let mut table = ConsoleTable::<Task>::new(width);
-    table
-        .add_column(TaskColumn::new("ID", |x| x.id.to_string()), 2)
-        .unwrap();
-    table
-        .add_column(
-            TaskColumn::new("Description", |x| x.description.to_string()),
-            8,
-        )
-        .unwrap();
-    table
-        .add_column(
-            TaskColumn::new("Scope", |x| {
-                x.scope
-                    .as_ref()
-                    .map_or("None".to_string(), |s| s.as_ref().to_string())
-            }),
-            3,
-        )
-        .unwrap();
+pub fn get_tasks_table(width: u8) -> ConsoleTableBuilder<Task> {
+    let id = TaskColumn::new("ID", |x| x.id.to_string()).set_data_alignment(Alignment::Right);
+    let description = TaskColumn::new("Description", |x| x.description.to_string());
+    let scope = TaskColumn::new("Scope", |x| match x.scope.as_ref() {
+        Some(v) => v.as_ref().to_string(),
+        None => "None".to_string(),
+    });
+    let created_at = TaskColumn::new("Created at", |x| {
+        x.created_at.format("%Y-%m-%d %H:%M:%S").to_string()
+    });
+    let completed_at = TaskColumn::new("Completed", |x| {
+        x.completed_at.map_or(" ", |_| "x").to_string()
+    });
 
-    table
-        .add_column(
-            TaskColumn::new("Created at", |x| {
-                x.created_at.format("%Y-%m-%d %H:%M:%S").to_string()
-            }),
-            6,
-        )
-        .unwrap();
-    table
-        .add_column(
-            TaskColumn::new("Completed", |x| {
-                x.completed_at.map_or(" ", |_| "x").to_string()
-            }),
-            4,
-        )
-        .unwrap();
-    table
+    let builder = ConsoleTableBuilder::<Task>::new(width)
+        .add_column(id, 1)
+        .add_column(description, 8)
+        .add_column(scope, 3)
+        .add_column(created_at, 4)
+        .add_column(completed_at, 2);
+
+    builder
 }
 
 type TaskColumn = Column<Task>;
@@ -59,7 +42,8 @@ type ColumnValueGetter<T> = fn(input: &T) -> String;
 
 pub struct Column<T> {
     pub name: String,
-    pub text_alignment: Alignment,
+    pub column_alignment: Alignment,
+    pub data_alignment: Alignment,
     get_value: ColumnValueGetter<T>,
 }
 
@@ -67,9 +51,20 @@ impl<T> Column<T> {
     pub fn new(name: &str, getter: ColumnValueGetter<T>) -> Self {
         Self {
             name: name.to_string(),
-            text_alignment: Alignment::Center,
+            column_alignment: Alignment::Center,
+            data_alignment: Alignment::Center,
             get_value: getter,
         }
+    }
+
+    pub fn set_column_alignment(mut self, alignment: Alignment) -> Self {
+        self.column_alignment = alignment;
+        self
+    }
+
+    pub fn set_data_alignment(mut self, alignment: Alignment) -> Self {
+        self.data_alignment = alignment;
+        self
     }
 }
 
@@ -82,36 +77,41 @@ pub struct ConsoleTable<T> {
     data: Vec<T>,
 }
 
-impl<T> ConsoleTable<T> {
+pub struct ConsoleTableBuilder<T> {
+    pub width: u8,
+    columns: Vec<(Column<T>, u8)>,
+    data: Vec<T>,
+    vertical_separator: char,
+    horizontal_separator: char,
+    cross_separator: char,
+}
+
+impl<T> ConsoleTableBuilder<T> {
     pub fn new(width: u8) -> Self {
         Self {
             width,
+            columns: vec![],
+            data: vec![],
             vertical_separator: '|',
             horizontal_separator: '-',
             cross_separator: '+',
-            columns: vec![],
-            data: vec![],
         }
     }
-
-    pub fn add_column(
-        &mut self,
-        column: Column<T>,
-        weight: u8,
-    ) -> Result<&Self, ConsoleTableError> {
-        if self.columns.len() >= 255 {
-            return Err(ConsoleTableError::LengthExceeded);
-        }
+    pub fn add_column(mut self, column: Column<T>, weight: u8) -> Self {
         self.columns.push((column, weight));
-        Ok(self)
+        self
     }
 
-    pub fn set_data(&mut self, data: Vec<T>) -> &Self {
+    pub fn set_data(mut self, data: Vec<T>) -> Self {
         self.data = data;
         self
     }
 
-    pub fn print(&self) -> Result<(), ConsoleTableError> {
+    pub fn build(self) -> Result<ConsoleTable<T>, ConsoleTableError> {
+        if self.columns.len() >= 255 {
+            return Err(ConsoleTableError::LengthExceeded);
+        }
+
         if self.columns.is_empty() {
             return Err(ConsoleTableError::NoColumns);
         }
@@ -119,13 +119,49 @@ impl<T> ConsoleTable<T> {
             return Err(ConsoleTableError::NotEnoughSpaceToPrint);
         }
 
+        Ok(ConsoleTable {
+            width: self.width,
+            columns: self.columns,
+            data: self.data,
+            vertical_separator: self.vertical_separator,
+            horizontal_separator: self.horizontal_separator,
+            cross_separator: self.cross_separator,
+        })
+    }
+
+    fn get_min_width(&self) -> u8 {
+        let column_len: u8 = self.columns.len().try_into().unwrap();
+        let spacing_witdh: u8 = column_len + 1;
+        let columns_width: u8 = self.columns.iter().map(|c| c.1).sum();
+        spacing_witdh + columns_width
+    }
+}
+
+impl<T> ConsoleTable<T> {
+    fn new(
+        width: u8,
+        columns: Vec<(Column<T>, u8)>,
+        data: Vec<T>,
+        vertical_separator: char,
+        horizontal_separator: char,
+        cross_separator: char,
+    ) -> Self {
+        Self {
+            width,
+            vertical_separator,
+            horizontal_separator,
+            cross_separator,
+            columns,
+            data,
+        }
+    }
+
+    pub fn print(&self) {
         self.print_separator();
         self.print_header();
         self.print_separator();
         self.print_data();
         self.print_separator();
-
-        Ok(())
     }
 
     fn print_separator(&self) {
@@ -150,7 +186,7 @@ impl<T> ConsoleTable<T> {
             .iter()
             .map(|x| {
                 let width: usize = (x.1 * unit_width).into();
-                get_formatted_cell(x.0.name.as_ref(), width, x.0.text_alignment)
+                get_formatted_cell(x.0.name.as_ref(), width, x.0.column_alignment)
             })
             .join(&self.vertical_separator.to_string());
         let column_header_text = add_value_to_start_and_end_of_string(
@@ -169,7 +205,7 @@ impl<T> ConsoleTable<T> {
                 .map(|x| {
                     let width: usize = (x.1 * unit_width).into();
                     let value = (x.0.get_value)(row);
-                    get_formatted_cell(&value, width, x.0.text_alignment)
+                    get_formatted_cell(&value, width, x.0.data_alignment)
                 })
                 .join(&self.vertical_separator.to_string());
             let column_header_text = add_value_to_start_and_end_of_string(
@@ -178,13 +214,6 @@ impl<T> ConsoleTable<T> {
             );
             println!("{}", column_header_text);
         }
-    }
-
-    fn get_min_width(&self) -> u8 {
-        let column_len: u8 = self.columns.len().try_into().unwrap();
-        let spacing_witdh: u8 = column_len + 1;
-        let columns_width: u8 = self.columns.iter().map(|c| c.1).sum();
-        spacing_witdh + columns_width
     }
 
     fn get_unit_width(&self) -> u8 {
