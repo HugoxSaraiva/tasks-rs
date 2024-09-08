@@ -1,4 +1,4 @@
-use std::fmt::{Alignment, Display};
+use std::fmt::Alignment;
 
 use itertools::Itertools;
 
@@ -26,14 +26,12 @@ pub fn get_tasks_table(width: u8) -> ConsoleTableBuilder<Task> {
         x.completed_at.map_or(" ", |_| "x").to_string()
     });
 
-    let builder = ConsoleTableBuilder::<Task>::new(width)
+    ConsoleTableBuilder::<Task>::new(width)
         .add_column(id, 1)
         .add_column(description, 8)
         .add_column(scope, 3)
         .add_column(created_at, 4)
-        .add_column(completed_at, 2);
-
-    builder
+        .add_column(completed_at, 2)
 }
 
 type TaskColumn = Column<Task>;
@@ -74,13 +72,11 @@ pub struct ConsoleTable<T> {
     pub horizontal_separator: char,
     pub cross_separator: char,
     columns: Vec<(Column<T>, u8)>,
-    data: Vec<T>,
 }
 
 pub struct ConsoleTableBuilder<T> {
     pub width: u8,
     columns: Vec<(Column<T>, u8)>,
-    data: Vec<T>,
     vertical_separator: char,
     horizontal_separator: char,
     cross_separator: char,
@@ -91,7 +87,6 @@ impl<T> ConsoleTableBuilder<T> {
         Self {
             width,
             columns: vec![],
-            data: vec![],
             vertical_separator: '|',
             horizontal_separator: '-',
             cross_separator: '+',
@@ -99,11 +94,6 @@ impl<T> ConsoleTableBuilder<T> {
     }
     pub fn add_column(mut self, column: Column<T>, weight: u8) -> Self {
         self.columns.push((column, weight));
-        self
-    }
-
-    pub fn set_data(mut self, data: Vec<T>) -> Self {
-        self.data = data;
         self
     }
 
@@ -122,7 +112,6 @@ impl<T> ConsoleTableBuilder<T> {
         Ok(ConsoleTable {
             width: self.width,
             columns: self.columns,
-            data: self.data,
             vertical_separator: self.vertical_separator,
             horizontal_separator: self.horizontal_separator,
             cross_separator: self.cross_separator,
@@ -138,29 +127,14 @@ impl<T> ConsoleTableBuilder<T> {
 }
 
 impl<T> ConsoleTable<T> {
-    fn new(
-        width: u8,
-        columns: Vec<(Column<T>, u8)>,
-        data: Vec<T>,
-        vertical_separator: char,
-        horizontal_separator: char,
-        cross_separator: char,
-    ) -> Self {
-        Self {
-            width,
-            vertical_separator,
-            horizontal_separator,
-            cross_separator,
-            columns,
-            data,
-        }
-    }
-
-    pub fn print(&self) {
+    pub fn print<I>(&self, data: I)
+    where
+        I: IntoIterator<Item = T>,
+    {
         self.print_separator();
         self.print_header();
         self.print_separator();
-        self.print_data();
+        self.print_data(data);
         self.print_separator();
     }
 
@@ -196,15 +170,18 @@ impl<T> ConsoleTable<T> {
         println!("{}", column_header_text);
     }
 
-    fn print_data(&self) {
+    fn print_data<I>(&self, data: I)
+    where
+        I: IntoIterator<Item = T>,
+    {
         let unit_width = self.get_unit_width();
-        for row in self.data.iter() {
+        for row in data.into_iter() {
             let data_text: String = self
                 .columns
                 .iter()
                 .map(|x| {
                     let width: usize = (x.1 * unit_width).into();
-                    let value = (x.0.get_value)(row);
+                    let value = (x.0.get_value)(&row);
                     get_formatted_cell(&value, width, x.0.data_alignment)
                 })
                 .join(&self.vertical_separator.to_string());

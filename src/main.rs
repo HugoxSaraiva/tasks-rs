@@ -1,4 +1,4 @@
-use clap::{builder, Parser};
+use clap::Parser;
 use tasks::{
     cli::{Cli, Commands, ScopeCommands},
     configuration::Settings,
@@ -34,9 +34,9 @@ async fn main() -> anyhow::Result<()> {
         Commands::List { scope } => {
             let tasks = list_tasks(&app.pool, scope.map(Scope::new)).await?;
             let tasks: Vec<Task> = tasks.into_iter().filter_map(|x| x.ok()).collect();
-            let builder = get_tasks_table(120).set_data(tasks);
+            let builder = get_tasks_table(120);
             let table = builder.build().unwrap();
-            table.print();
+            table.print(tasks);
         }
         Commands::Complete { id } => {
             let success = complete_task(&app.pool, id).await?;
