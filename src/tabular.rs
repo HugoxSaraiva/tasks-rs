@@ -12,7 +12,7 @@ fn format_string_to_constraint(text: &str, max_len: usize) -> &str {
     &text[0..max_len]
 }
 
-pub fn get_tasks_table(width: u8) -> ConsoleTableBuilder<Task> {
+pub fn get_tasks_table(width: u16) -> ConsoleTableBuilder<Task> {
     let id = TaskColumn::new("ID", |x| x.id.to_string()).set_data_alignment(Alignment::Right);
     let description = TaskColumn::new("Description", |x| x.description.to_string());
     let scope = TaskColumn::new("Scope", |x| match x.scope.as_ref() {
@@ -67,23 +67,23 @@ impl<T> Column<T> {
 }
 
 pub struct ConsoleTable<T> {
-    width: u8,
+    width: u16,
     pub vertical_separator: char,
     pub horizontal_separator: char,
     pub cross_separator: char,
-    columns: Vec<(Column<T>, u8)>,
+    columns: Vec<(Column<T>, u16)>,
 }
 
 pub struct ConsoleTableBuilder<T> {
-    pub width: u8,
-    columns: Vec<(Column<T>, u8)>,
+    pub width: u16,
+    columns: Vec<(Column<T>, u16)>,
     vertical_separator: char,
     horizontal_separator: char,
     cross_separator: char,
 }
 
 impl<T> ConsoleTableBuilder<T> {
-    pub fn new(width: u8) -> Self {
+    pub fn new(width: u16) -> Self {
         Self {
             width,
             columns: vec![],
@@ -92,7 +92,7 @@ impl<T> ConsoleTableBuilder<T> {
             cross_separator: '+',
         }
     }
-    pub fn add_column(mut self, column: Column<T>, weight: u8) -> Self {
+    pub fn add_column(mut self, column: Column<T>, weight: u16) -> Self {
         self.columns.push((column, weight));
         self
     }
@@ -118,10 +118,10 @@ impl<T> ConsoleTableBuilder<T> {
         })
     }
 
-    fn get_min_width(&self) -> u8 {
-        let column_len: u8 = self.columns.len().try_into().unwrap();
-        let spacing_witdh: u8 = column_len + 1;
-        let columns_width: u8 = self.columns.iter().map(|c| c.1).sum();
+    fn get_min_width(&self) -> u16 {
+        let column_len: u16 = self.columns.len().try_into().unwrap();
+        let spacing_witdh: u16 = column_len + 1;
+        let columns_width: u16 = self.columns.iter().map(|c| c.1).sum();
         spacing_witdh + columns_width
     }
 }
@@ -193,11 +193,11 @@ impl<T> ConsoleTable<T> {
         }
     }
 
-    fn get_unit_width(&self) -> u8 {
-        let column_len: u8 = self.columns.len().try_into().unwrap();
-        let spacing_witdh: u8 = column_len + 1;
+    fn get_unit_width(&self) -> u16 {
+        let column_len: u16 = self.columns.len().try_into().unwrap();
+        let spacing_witdh: u16 = column_len + 1;
 
-        let total_units: u8 = self.columns.iter().map(|c| c.1).sum();
+        let total_units: u16 = self.columns.iter().map(|c| c.1).sum();
         (self.width - spacing_witdh) / total_units
     }
 }

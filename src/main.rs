@@ -9,6 +9,7 @@ use tasks::{
     tabular::get_tasks_table,
     tasks::{add_task, complete_task, delete_task, list_tasks},
 };
+use terminal_size::terminal_size;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
@@ -34,7 +35,11 @@ async fn main() -> anyhow::Result<()> {
         Commands::List { scope } => {
             let tasks = list_tasks(&app.pool, scope.map(Scope::new)).await?;
             let tasks: Vec<Task> = tasks.into_iter().filter_map(|x| x.ok()).collect();
-            let builder = get_tasks_table(120);
+            let builder = terminal_size()
+                .map(|(w, _)| w.0)
+                .or(Some(120))
+                .map(get_tasks_table)
+                .unwrap();
             let table = builder.build().unwrap();
             table.print(tasks);
         }
